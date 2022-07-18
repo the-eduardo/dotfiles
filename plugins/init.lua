@@ -1,39 +1,188 @@
-return {
+vim.cmd "packadd packer.nvim"
 
-   ["github/copilot.vim"] = {},
+local plugins = {
 
-   ["fatih/vim-go"] = {},
+   ["nvim-lua/plenary.nvim"] = { module = "plenary" },
+   ["wbthomason/packer.nvim"] = {},
+   ["NvChad/extensions"] = { module = { "telescope", "nvchad" } },
 
-   ["lukas-reineke/indent-blankline.nvim"] = {
-	config = function()
-		require "custom.plugins.blankline"
-	end
+   ["NvChad/base46"] = {
+      config = function()
+         local ok, base46 = pcall(require, "base46")
+
+         if ok then
+            base46.load_theme()
+         end
+      end,
    },
 
-   ["andweeb/presence.nvim"] = {
-	require("presence"):setup({
-    -- General options
-    auto_update         = true,                       -- Update activity based on autocmd events (if `false`, map or manually execute `:lua package.loaded.presence:update()`)
-    neovim_image_text   = "Si vis pacem, para bellum", -- Text displayed when hovered over the Neovim image
-    main_image          = "neovim",                   -- Main image display (either "neovim" or "file")
-    client_id           = "793271441293967371",       -- Use your own Discord application client id (not recommended)
-    log_level           = nil,                        -- Log messages at or above this level (one of the following: "debug", "info", "warn", "error")
-    debounce_timeout    = 10,                         -- Number of seconds to debounce events (or calls to `:lua package.loaded.presence:update(<filename>, true)`)
-    enable_line_number  = false,                      -- Displays the current line number instead of the current project
-    blacklist           = {},                         -- A list of strings or Lua patterns that disable Rich Presence if the current file name, path, or workspace matches
-    buttons             = true,                       -- Configure Rich Presence button(s), either a boolean to enable/disable, a static table (`{{ label = "<label>", url = "<url>" }, ...}`, or a function(buffer: string, repo_url: string|nil): table)
-    file_assets         = {},                         -- Custom file asset definitions keyed by file names and extensions (see default config at `lua/presence/file_assets.lua` for reference)
+   ["Nvchad/ui"] = {},
 
-    -- Rich Presence text options
-    editing_text        = "Editing %s",               -- Format string rendered when an editable file is loaded in the buffer (either string or function(filename: string): string)
-    file_explorer_text  = "Browsing %s",              -- Format string rendered when browsing a file explorer (either string or function(file_explorer_name: string): string)
-    git_commit_text     = "Committing changes",       -- Format string rendered when committing changes in git (either string or function(filename: string): string)
-    plugin_manager_text = "Managing plugins",         -- Format string rendered when managing plugins (either string or function(plugin_manager_name: string): string)
-    reading_text        = "Reading %s",               -- Format string rendered when a read-only or unmodifiable file is loaded in the buffer (either string or function(filename: string): string)
-    workspace_text      = "Working on %s",            -- Format string rendered when in a git repository (either string or function(project_name: string|nil, filename: string): string)
-    line_number_text    = "Line %s out of %s",        -- Format string rendered when `enable_line_number` is set to true (either string or function(line_number: number, line_count: number): string)
-	})
-  },
+   ["NvChad/nvterm"] = {
+      module = "nvterm",
+      config = function()
+         require "plugins.configs.nvterm"
+      end,
+   },
+
+   ["kyazdani42/nvim-web-devicons"] = {
+      module = "nvim-web-devicons",
+      config = function()
+         require("plugins.configs.others").devicons()
+      end,
+   },
+
+   ["lukas-reineke/indent-blankline.nvim"] = {
+      opt = true,
+      setup = function()
+         require("core.lazy_load").on_file_open "indent-blankline.nvim"
+      end,
+      config = function()
+         require("plugins.configs.others").blankline()
+      end,
+   },
+
+   ["NvChad/nvim-colorizer.lua"] = {
+      opt = true,
+      setup = function()
+         require("core.lazy_load").colorizer()
+      end,
+      config = function()
+         require("plugins.configs.others").colorizer()
+      end,
+   },
+
+   ["nvim-treesitter/nvim-treesitter"] = {
+      module = "nvim-treesitter",
+      setup = function()
+         require("core.lazy_load").on_file_open "nvim-treesitter"
+      end,
+      cmd = require("core.lazy_load").treesitter_cmds,
+      run = ":TSUpdate",
+      config = function()
+         require "plugins.configs.treesitter"
+      end,
+   },
+
+   -- git stuff
+   ["lewis6991/gitsigns.nvim"] = {
+      ft = "gitcommit",
+      setup = function()
+         require("core.lazy_load").gitsigns()
+      end,
+      config = function()
+         require("plugins.configs.others").gitsigns()
+      end,
+   },
+
+   -- lsp stuff
+
+   ["williamboman/nvim-lsp-installer"] = {
+      opt = true,
+      cmd = require("core.lazy_load").lsp_cmds,
+      setup = function()
+         require("core.lazy_load").on_file_open "nvim-lsp-installer"
+      end,
+   },
+
+   ["neovim/nvim-lspconfig"] = {
+      after = "nvim-lsp-installer",
+      module = "lspconfig",
+      config = function()
+         require "plugins.configs.lsp_installer"
+         require "plugins.configs.lspconfig"
+      end,
+   },
+
+   -- load luasnips + cmp related in insert mode only
+
+   ["rafamadriz/friendly-snippets"] = {
+      module = "cmp_nvim_lsp",
+      event = "InsertEnter",
+   },
+
+   ["hrsh7th/nvim-cmp"] = {
+      after = "friendly-snippets",
+      config = function()
+         require "plugins.configs.cmp"
+      end,
+   },
+
+   ["L3MON4D3/LuaSnip"] = {
+      wants = "friendly-snippets",
+      after = "nvim-cmp",
+      config = function()
+         require("plugins.configs.others").luasnip()
+      end,
+   },
+
+   ["saadparwaiz1/cmp_luasnip"] = {
+      after = "LuaSnip",
+   },
+
+   ["hrsh7th/cmp-nvim-lua"] = {
+      after = "cmp_luasnip",
+   },
+
+   ["hrsh7th/cmp-nvim-lsp"] = {
+      after = "cmp-nvim-lua",
+   },
+
+   ["hrsh7th/cmp-buffer"] = {
+      after = "cmp-nvim-lsp",
+   },
+
+   ["hrsh7th/cmp-path"] = {
+      after = "cmp-buffer",
+   },
+
+   -- misc plugins
+   ["windwp/nvim-autopairs"] = {
+      after = "nvim-cmp",
+      config = function()
+         require("plugins.configs.others").autopairs()
+      end,
+   },
+
+   ["goolord/alpha-nvim"] = {
+      after = "base46",
+      disable = true,
+      config = function()
+         require "plugins.configs.alpha"
+      end,
+   },
+
+   ["numToStr/Comment.nvim"] = {
+      module = "Comment",
+      keys = { "gc", "gb" },
+      config = function()
+         require("plugins.configs.others").comment()
+      end,
+   },
+
+   -- file managing , picker etc
+   ["kyazdani42/nvim-tree.lua"] = {
+      ft = "alpha",
+      cmd = { "NvimTreeToggle", "NvimTreeFocus" },
+      config = function()
+         require "plugins.configs.nvimtree"
+      end,
+   },
+
+   ["nvim-telescope/telescope.nvim"] = {
+      cmd = "Telescope",
+      config = function()
+         require "plugins.configs.telescope"
+      end,
+   },
+
+   -- Only load whichkey after all the gui
+   ["folke/which-key.nvim"] = {
+      module = "which-key",
+      config = function()
+         require "plugins.configs.whichkey"
+      end,
+   },
 }
 
-
+require("core.packer").run(plugins)
